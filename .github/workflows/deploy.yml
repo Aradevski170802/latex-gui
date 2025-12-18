@@ -22,15 +22,19 @@ jobs:
           node-version: 20
 
       - name: Install deps
-        run: npm ci
+        run: |
+          cd latex-gui
+          npm ci
 
       - name: Build
-        run: npm run build
+        run: |
+          cd latex-gui
+          npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./latex-gui/dist
 
   deploy:
     needs: build
