@@ -247,3 +247,4 @@ function emitFigure(node: FigureNode, out: string[]) {
         ''
     );
 }
+
