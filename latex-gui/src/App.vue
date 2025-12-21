@@ -415,13 +415,195 @@ function deleteNodeOnly(id: string | null) {
 
           <!-- TABLE EDITOR -->
           <section v-else-if="selectedNode.type === 'table'">
-            <!-- ... unchanged table editor ... -->
+            <div class="two-col">
+              <label>
+                <span>Caption</span>
+                <input v-model="(selectedNode as TableNode).caption" />
+              </label>
+              <label>
+                <span>Label</span>
+                <input v-model="(selectedNode as TableNode).label" />
+              </label>
+            </div>
+
+            <label class="checkbox">
+              <input type="checkbox" v-model="(selectedNode as TableNode).hasHeader" />
+              <span>First row is header</span>
+            </label>
+
+            <!-- Table style -->
+            <div class="pill-group">
+              <span class="pill-label">Style</span>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).tableStyle === 'default' }"
+                @click="(selectedNode as TableNode).tableStyle = 'default'">
+                Default
+              </button>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).tableStyle === 'booktabs' }"
+                @click="(selectedNode as TableNode).tableStyle = 'booktabs'">
+                Booktabs
+              </button>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).tableStyle === 'striped' }"
+                @click="(selectedNode as TableNode).tableStyle = 'striped'">
+                Striped
+              </button>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).tableStyle === 'minimal' }"
+                @click="(selectedNode as TableNode).tableStyle = 'minimal'">
+                Minimal
+              </button>
+            </div>
+
+            <!-- Width control -->
+            <div class="pill-group">
+              <span class="pill-label">Width</span>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).widthMode === 'natural' }"
+                @click="(selectedNode as TableNode).widthMode = 'natural'">
+                Natural
+              </button>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).widthMode === 'textwidth' }"
+                @click="(selectedNode as TableNode).widthMode = 'textwidth'">
+                Fit page
+              </button>
+              <button class="pill" :class="{ active: (selectedNode as TableNode).widthMode === 'resize' }"
+                @click="(selectedNode as TableNode).widthMode = 'resize'">
+                Custom %
+              </button>
+            </div>
+
+            <div v-if="(selectedNode as TableNode).widthMode === 'resize'" class="slider-row">
+              <span>Width: {{ Math.round((selectedNode as TableNode).maxWidthFactor * 100) }}%</span>
+              <input type="range" min="50" max="120" step="5" :value="(selectedNode as TableNode).maxWidthFactor * 100"
+                @input="(selectedNode as TableNode).maxWidthFactor = ($event.target as HTMLInputElement).valueAsNumber / 100" />
+            </div>
+
+            <div v-if="showAdvanced" class="advanced">
+              <h3>Columns</h3>
+              <div v-for="(col, cIndex) in (selectedNode as TableNode).columns" :key="cIndex" class="col-config">
+                <span class="muted">Col {{ cIndex + 1 }}</span>
+                <select v-model="col.align">
+                  <option value="l">Left</option>
+                  <option value="c">Center</option>
+                  <option value="r">Right</option>
+                </select>
+                <input v-model="col.width" placeholder="width (e.g. 3cm, optional)" />
+              </div>
+
+              <label>
+                <span>Horizontal padding (\\tabcolsep)</span>
+                <input v-model="(selectedNode as TableNode).hPadding" placeholder="0.5em, 2pt, etc." />
+              </label>
+            </div>
+
+            <h3 class="section-title">Size & cells</h3>
+            <div class="size-row">
+              <span>Rows: {{ (selectedNode as TableNode).rows }}</span>
+              <div>
+                <button class="mini" @click="
+                  (selectedNode as TableNode).rows++;
+                (selectedNode as TableNode).cells.push(
+                  Array.from(
+                    { length: (selectedNode as TableNode).cols },
+                    () => ''
+                  )
+                );
+                (selectedNode as TableNode).cellColors.push(
+                  Array.from(
+                    { length: (selectedNode as TableNode).cols },
+                    () => null
+                  )
+                );
+                ">
+                  + row
+                </button>
+                <button class="mini" @click="
+                  (selectedNode as TableNode).rows = Math.max(
+                    1,
+                    (selectedNode as TableNode).rows - 1
+                  );
+                (selectedNode as TableNode).cells.pop();
+                (selectedNode as TableNode).cellColors.pop();
+                ">
+                  − row
+                </button>
+              </div>
+              <span>Cols: {{ (selectedNode as TableNode).cols }}</span>
+              <div>
+                <button class="mini" @click="
+                  (selectedNode as TableNode).cols++;
+                (selectedNode as TableNode).columns.push({ align: 'c' });
+                (selectedNode as TableNode).cells.forEach(r => r.push(''));
+                (selectedNode as TableNode).cellColors.forEach(r => r.push(null));
+                ">
+                  + col
+                </button>
+                <button class="mini" @click="
+                  (selectedNode as TableNode).cols = Math.max(
+                    1,
+                    (selectedNode as TableNode).cols - 1
+                  );
+                (selectedNode as TableNode).columns.pop();
+                (selectedNode as TableNode).cells.forEach(r => r.pop());
+                (selectedNode as TableNode).cellColors.forEach(r => r.pop());
+                ">
+                  − col
+                </button>
+              </div>
+            </div>
+
+            <!-- Cell color picker -->
+            <div class="cell-color-panel">
+              <span class="muted">Cell color:</span>
+              <button class="color-swatch none" @click="setCellColor(null)">None</button>
+              <button class="color-swatch" style="background:#fef9c3" @click="setCellColor('yellow!20')" />
+              <button class="color-swatch" style="background:#fee2e2" @click="setCellColor('red!15')" />
+              <button class="color-swatch" style="background:#dcfce7" @click="setCellColor('green!15')" />
+              <button class="color-swatch" style="background:#e0f2fe" @click="setCellColor('blue!15')" />
+              <input v-model="customColorInput" @keyup.enter="setCellColor(customColorInput)"
+                placeholder="custom (e.g. gray!10)" />
+            </div>
+
+            <div class="table-grid">
+              <table class="cells">
+                <tr v-for="(row, rIndex) in (selectedNode as TableNode).cells" :key="rIndex">
+                  <td v-for="(cell, cIndex) in row" :key="cIndex" :class="{
+                    selected:
+                      selectedCell &&
+                      selectedCell.row === rIndex &&
+                      selectedCell.col === cIndex,
+                  }" @click="selectCell(rIndex, cIndex)">
+                    <input v-model="row[cIndex]" :placeholder="`r${rIndex + 1}c${cIndex + 1}`" />
+                  </td>
+                </tr>
+              </table>
+            </div>
           </section>
+
 
           <!-- FIGURE -->
           <section v-else-if="selectedNode.type === 'figure'">
-            <!-- ... unchanged figure editor ... -->
+            <label>
+              <span>Image path</span>
+              <input v-model="(selectedNode as FigureNode).imagePath" />
+            </label>
+            <div class="two-col">
+              <label>
+                <span>Caption</span>
+                <input v-model="(selectedNode as FigureNode).caption" />
+              </label>
+              <label>
+                <span>Label</span>
+                <input v-model="(selectedNode as FigureNode).label" />
+              </label>
+            </div>
+            <label>
+              <span>Width (fraction of text width)</span>
+              <input type="range" min="30" max="100" step="5" :value="(selectedNode as FigureNode).width * 100"
+                @input="(selectedNode as FigureNode).width = ($event.target as HTMLInputElement).valueAsNumber / 100" />
+              <span class="muted">
+                {{ Math.round((selectedNode as FigureNode).width * 100) }}%
+              </span>
+            </label>
           </section>
+
 
           <!-- PAGEBREAK -->
           <section v-else-if="selectedNode.type === 'pagebreak'">
