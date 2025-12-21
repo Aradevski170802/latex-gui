@@ -8,6 +8,7 @@ import {
   type TableNode,
   type FigureNode,
   type TableColumn,
+  type EquationNode,
 } from './latexModel';
 
 const doc = ref<DocumentRoot>(createEmptyDocument());
@@ -210,6 +211,19 @@ function addPageBreak() {
     children: [],
   } as DocNode);
 }
+function addEquation() {
+  const target = selectedNode.value ?? doc.value;
+  target.children = target.children || [];
+  target.children.push({
+    id: 'eq-' + Date.now(),
+    type: 'equation',
+    mode: 'display',
+    latex: 'E = mc^2',
+    numbered: true,
+    children: [],
+  } as EquationNode);
+}
+
 
 // helpers for UI
 
@@ -229,6 +243,8 @@ function iconForNode(n: DocNode): string {
       return '¶';
     case 'pagebreak':
       return '⤵';
+    case 'equation':
+      return '∑';
     default:
       return '•';
   }
@@ -299,6 +315,7 @@ function deleteNodeOnly(id: string | null) {
         <button class="ghost" @click="addText">+ Text</button>
         <button class="ghost" @click="addTable">+ Table</button>
         <button class="ghost" @click="addFigure">+ Figure</button>
+        <button class="ghost" @click="addEquation">+ Equation</button>
         <button class="ghost" @click="addPageBreak">+ New page</button>
 
         <button class="ghost" @click="deleteNodeWithChildren(selectedId)" :disabled="!selectedId">
@@ -388,7 +405,9 @@ function deleteNodeOnly(id: string | null) {
                           ? 'Figure'
                           : selectedNode.type === 'pagebreak'
                             ? 'Page break'
-                            : 'Text'
+                            : selectedNode.type === 'equation'
+                              ? 'Equation'
+                              : 'Text'
               }}
             </h2>
           </header>
@@ -411,6 +430,26 @@ function deleteNodeOnly(id: string | null) {
               <span>Text</span>
               <textarea v-model="selectedNode.content" rows="10" />
             </label>
+          </section>
+          <!-- Equation -->
+          <section v-else-if="selectedNode.type === 'equation'">
+            <label>
+              <span>LaTeX Code</span>
+              <textarea v-model="(selectedNode as EquationNode).latex" rows="6" />
+            </label>
+            <div class="inline">
+              <label>
+                <span>Mode</span>
+                <select v-model="(selectedNode as EquationNode).mode">
+                  <option value="inline">Inline</option>
+                  <option value="display">Display</option>
+                </select>
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" v-model="(selectedNode as EquationNode).numbered" />
+                <span>Numbered</span>
+              </label>
+            </div>
           </section>
 
           <!-- TABLE EDITOR -->

@@ -8,7 +8,8 @@ export type NodeType =
     | 'text'
     | 'table'
     | 'figure'
-    | 'pagebreak';
+    | 'pagebreak'
+    | 'equation';
 
 export interface BaseNode {
     id: string;
@@ -56,7 +57,16 @@ export interface PageBreakNode extends BaseNode {
     type: 'pagebreak';
 }
 
-export type DocNode = BaseNode | TableNode | FigureNode | PageBreakNode;
+export type EquationMode = 'inline' | 'display';
+
+export interface EquationNode extends BaseNode {
+    type: 'equation';
+    mode: EquationMode;
+    latex: string;
+    numbered: boolean;
+}
+
+export type DocNode = BaseNode | TableNode | FigureNode | PageBreakNode | EquationNode;
 
 export interface DocumentRoot extends BaseNode {
     type: 'document';
@@ -66,6 +76,7 @@ export interface DocumentRoot extends BaseNode {
     includeToc: boolean;
     children: DocNode[];
 }
+
 
 // ---------- helpers ----------
 
@@ -97,6 +108,7 @@ export function generateLatex(doc: DocumentRoot): string {
         '\\usepackage{booktabs}', // for table styles
         '\\usepackage{array}',
         '\\usepackage{tabularx}',
+        '\\usepackage{amsmath}',
         '\\usepackage[table]{xcolor}', // colors in tables
         '\\usepackage{colortbl}',
         '\\usepackage{hyperref}',
@@ -135,6 +147,22 @@ function emitNode(node: DocNode, out: string[]) {
             break;
         case 'subsection':
             out.push(`\\subsection{${esc(node.title)}}`, '');
+            break;
+        case 'equation':
+            const eq = node as EquationNode;
+            if (eq.mode === 'inline') {
+                // inline: keep it on its own line but using \( ... \)
+                out.push(`\\(${eq.latex}\\)`, '');
+            } else {
+                // display: numbered vs unnumbered
+                const env = eq.numbered ? 'equation' : 'equation*';
+                out.push(
+                    `\\begin{${env}}`,
+                    eq.latex,
+                    `\\end{${env}}`,
+                    ''
+                );
+            }
             break;
         case 'text':
             if (node.content) out.push(esc(node.content), '');
@@ -247,4 +275,6 @@ function emitFigure(node: FigureNode, out: string[]) {
         ''
     );
 }
+
+
 
