@@ -224,6 +224,44 @@ function addEquation() {
   } as EquationNode);
 }
 
+function currentEquation(): EquationNode | null {
+  const n = selectedNode.value;
+  return n && n.type === 'equation' ? (n as EquationNode) : null;
+}
+
+// very simple "append" helpers; you can later make them cursor-aware
+function insertFrac() {
+  const eq = currentEquation();
+  if (!eq) return;
+  eq.latex += ' \\frac{a}{b}';
+}
+
+function insertBinom() {
+  const eq = currentEquation();
+  if (!eq) return;
+  eq.latex += ' \\binom{n}{k}';
+}
+
+function insertAlignEnvironment() {
+  const eq = currentEquation();
+  if (!eq) return;
+  // switch this node to display, non-inline, with align
+  eq.mode = 'display';
+  eq.numbered = false; // we'll use align* for multi-lines
+  // a starter template with alignment points &
+  eq.latex = 'a &= b + c \\\\\n&= d + e';
+}
+
+// declare operator in preamble-like macro area or inside equation
+function insertDeclareOperator() {
+  const eq = currentEquation();
+  if (!eq) return;
+  // common pattern: \DeclareMathOperator{\Var}{Var}
+  // For now, just help user add an operator usage:
+  eq.latex += ' \\operatorname{Var}(X)';
+}
+
+
 
 // helpers for UI
 
@@ -431,13 +469,8 @@ function deleteNodeOnly(id: string | null) {
               <textarea v-model="selectedNode.content" rows="10" />
             </label>
           </section>
-          <!-- Equation -->
           <section v-else-if="selectedNode.type === 'equation'">
-            <label>
-              <span>LaTeX Code</span>
-              <textarea v-model="(selectedNode as EquationNode).latex" rows="6" />
-            </label>
-            <div class="inline">
+            <div class="two-col">
               <label>
                 <span>Mode</span>
                 <select v-model="(selectedNode as EquationNode).mode">
@@ -445,12 +478,26 @@ function deleteNodeOnly(id: string | null) {
                   <option value="display">Display</option>
                 </select>
               </label>
-              <label class="checkbox">
-                <input type="checkbox" v-model="(selectedNode as EquationNode).numbered" />
+              <label v-if="(selectedNode as EquationNode).mode === 'display'">
                 <span>Numbered</span>
+                <input type="checkbox" v-model="(selectedNode as EquationNode).numbered" />
               </label>
             </div>
+
+            <label>
+              <span>Equation LaTeX</span>
+              <textarea v-model="(selectedNode as EquationNode).latex" rows="4" />
+            </label>
+
+            <div class="math-snippets">
+              <span class="muted">Quick inserts:</span>
+              <button class="mini" @click="insertFrac">\\frac{a}{b}</button>
+              <button class="mini" @click="insertBinom">\\binom{n}{k}</button>
+              <button class="mini" @click="insertAlignEnvironment">align*</button>
+              <button class="mini" @click="insertDeclareOperator">\\operatorname{Var}</button>
+            </div>
           </section>
+
 
           <!-- TABLE EDITOR -->
           <section v-else-if="selectedNode.type === 'table'">
