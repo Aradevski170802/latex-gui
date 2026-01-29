@@ -66,6 +66,9 @@ export interface EquationNode extends BaseNode {
     numbered: boolean;
 }
 
+
+
+
 export type DocNode = BaseNode | TableNode | FigureNode | PageBreakNode | EquationNode;
 
 export interface DocumentRoot extends BaseNode {
